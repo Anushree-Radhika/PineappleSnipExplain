@@ -1,353 +1,3 @@
-// (() => {
-//   if (window.__snipExplainInjected) {
-//     chrome.runtime.onMessage.addListener(handleMessage);
-//     return;
-//   }
-//   window.__snipExplainInjected = true;
-
-//   let overlay, box, startX, startY, selecting = false;
-//   let customModeEnabled = false; // whether the "Ask a question" box is offered at all
-
-//   chrome.runtime.onMessage.addListener(handleMessage);
-//   function handleMessage(msg) {
-//     if (msg.type === 'START_SELECTION') {
-//       customModeEnabled = !!msg.customMode;
-//       startSelectionMode();
-//     }
-//   }
-//   function startSelectionMode() {
-//     if (overlay) return;
-
-//     overlay = document.createElement('div');
-//     Object.assign(overlay.style, {
-//       position: 'fixed', inset: '0', zIndex: 2147483647,
-//       cursor: 'crosshair', background: 'rgba(0,0,0,0.15)'
-//     });
-
-//     box = document.createElement('div');
-//     Object.assign(box.style, {
-//       position: 'fixed', border: '2px solid #e0a800',
-//       background: 'rgba(245,197,24,0.25)', display: 'none',
-//       zIndex: 2147483647,
-//       pointerEvents: 'none' // box never intercepts the mouse -- avoids a stuck-drag bug
-//     });
-
-//     document.documentElement.appendChild(overlay);
-//     document.documentElement.appendChild(box);
-
-//     overlay.addEventListener('mousedown', onMouseDown);
-//     document.addEventListener('keydown', onKeyDown);
-//   }
-
-//   function onKeyDown(e) {
-//     if (e.key === 'Escape') cleanup();
-//   }
-
-//   function onMouseDown(e) {
-//     selecting = true;
-//     startX = e.clientX;
-//     startY = e.clientY;
-//     box.style.left = startX + 'px';
-//     box.style.top = startY + 'px';
-//     box.style.width = '0px';
-//     box.style.height = '0px';
-//     box.style.display = 'block';
-
-//     overlay.addEventListener('mousemove', onMouseMove);
-//     overlay.addEventListener('mouseup', onMouseUp);
-//   }
-
-//   function onMouseMove(e) {
-//     if (!selecting) return;
-//     const x = Math.min(e.clientX, startX);
-//     const y = Math.min(e.clientY, startY);
-//     const w = Math.abs(e.clientX - startX);
-//     const h = Math.abs(e.clientY - startY);
-//     Object.assign(box.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
-//   }
-
-//   async function onMouseUp() {
-//     selecting = false;
-//     const rectCss = box.getBoundingClientRect();
-
-//     if (rectCss.width < 10 || rectCss.height < 10) {
-//       cleanup();
-//       return;
-//     }
-
-//     const dpr = window.devicePixelRatio || 1;
-//     const rect = {
-//       left: Math.round(rectCss.left * dpr),
-//       top: Math.round(rectCss.top * dpr),
-//       width: Math.round(rectCss.width * dpr),
-//       height: Math.round(rectCss.height * dpr)
-//     };
-
-//     cleanup();
-//     const panel = createPanel(rectCss);
-//     panel.setLoading();
-
-//     chrome.runtime.sendMessage({ type: 'CAPTURE_SELECTION', rect }, (response) => {
-//       if (chrome.runtime.lastError) {
-//         panel.setError(chrome.runtime.lastError.message);
-//         return;
-//       }
-//       if (response?.error) {
-//         panel.setError(response.error);
-//       } else {
-//         panel.setAnswer(response.text, response.messages, response.usageCount, response.usageLimit);
-//       }
-//     });
-//   }
-//   function cleanup() {
-//     document.removeEventListener('keydown', onKeyDown);
-//     if (overlay) { overlay.remove(); overlay = null; }
-//     if (box) { box.remove(); box = null; }
-//   }
-
-//   // ---- Result panel ----
-//   //
-//   // Layout: [ header ] / [ scrollable answer area ] / [ pinned footer ]
-//   // The footer (quota + "Ask a question" + the input row) is NOT part of the
-//   // scrolling area, so it can never be pushed off the bottom of the screen.
-//   // The panel is also clamped to the viewport every time its size changes.
-
-//   function createPanel(anchorRect) {
-//     const old = document.getElementById('__snip_explain_panel');
-//     if (old) old.remove();
-
-//     const MARGIN = 12; // minimum gap between the panel and the screen edges
-//     const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-
-//     const panel = document.createElement('div');
-//     panel.id = '__snip_explain_panel';
-//     Object.assign(panel.style, {
-//       position: 'fixed',
-//       top: '0px',
-//       left: '0px',
-//       width: Math.min(360, window.innerWidth - MARGIN * 2) + 'px',
-//       maxHeight: Math.min(520, window.innerHeight - MARGIN * 2) + 'px',
-//       display: 'flex',
-//       flexDirection: 'column',
-//       boxSizing: 'border-box',
-//       overflow: 'hidden',
-//       background: '#fffbea',
-//       color: '#3b2a00',
-//       border: '1px solid #ecd576',
-//       borderTop: '4px solid #4a9a3f',
-//       borderRadius: '10px',
-//       fontFamily: FONT,
-//       fontSize: '13px',
-//       lineHeight: '1.5',
-//       boxShadow: '0 8px 24px rgba(90,60,0,0.25)',
-//       zIndex: 2147483647
-//     });
-
-//     // Header: title on the left, close button on the right
-//     const header = document.createElement('div');
-//     Object.assign(header.style, {
-//       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-//       padding: '8px 10px 6px 14px', flex: '0 0 auto'
-//     });
-
-//     const title = document.createElement('div');
-//     title.textContent = '🍍 Snip & Explain';
-//     Object.assign(title.style, { fontSize: '12px', fontWeight: '700', color: '#7a5b00' });
-
-//     const closeBtn = document.createElement('button');
-//     closeBtn.textContent = '✕';
-//     Object.assign(closeBtn.style, {
-//       border: 'none', background: 'transparent', color: '#7a6520', cursor: 'pointer',
-//       fontSize: '14px', lineHeight: '1', padding: '2px 4px', fontFamily: 'inherit'
-//     });
-//     closeBtn.addEventListener('click', () => panel.remove());
-//     header.append(title, closeBtn);
-
-//     // Scrollable answer area (answer + any follow-up exchanges live here)
-//     const content = document.createElement('div');
-//     Object.assign(content.style, {
-//       flex: '1 1 auto', minHeight: '0', overflowY: 'auto', padding: '0 14px 10px'
-//     });
-
-//     const body = document.createElement('div');
-//     body.style.whiteSpace = 'pre-wrap';
-//     body.style.wordBreak = 'break-word';
-//     body.textContent = 'Reading and explaining…';
-//     content.appendChild(body);
-
-//     // Pinned footer: [ 💬 Ask a question .......... ~x/y used ] + input row
-//     const footer = document.createElement('div');
-//     Object.assign(footer.style, {
-//       flex: '0 0 auto', padding: '8px 14px 10px', display: 'none',
-//       borderTop: '1px solid #ecd576', background: '#fff3c4'
-//     });
-
-//     const footerTop = document.createElement('div');
-//     Object.assign(footerTop.style, {
-//       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px'
-//     });
-
-//     const toggleBtn = document.createElement('button');
-//     toggleBtn.textContent = '💬 Ask a question';
-//     Object.assign(toggleBtn.style, {
-//       padding: '5px 10px', fontSize: '12px', border: '1px solid #ecd576',
-//       background: '#fffbea', color: '#7a5b00', borderRadius: '6px', cursor: 'pointer',
-//       display: 'none', fontFamily: 'inherit'
-//     });
-
-//     const quotaLine = document.createElement('div');
-//     Object.assign(quotaLine.style, { fontSize: '11px', color: '#7a6520', marginLeft: 'auto' });
-
-//     footerTop.append(toggleBtn, quotaLine);
-
-//     // Input and Send sit on one line
-//     const askRow = document.createElement('div');
-//     Object.assign(askRow.style, { display: 'none', gap: '6px', marginTop: '8px' });
-
-//     const input = document.createElement('input');
-//     input.type = 'text';
-//     input.placeholder = 'Ask about this…';
-//     Object.assign(input.style, {
-//       flex: '1 1 auto', minWidth: '0', boxSizing: 'border-box', padding: '8px',
-//       borderRadius: '6px', border: '1px solid #ecd576', background: '#fffbea',
-//       color: '#3b2a00', fontSize: '12px', fontFamily: 'inherit'
-//     });
-
-//     const sendBtn = document.createElement('button');
-//     sendBtn.textContent = 'Send';
-//     Object.assign(sendBtn.style, {
-//       flex: '0 0 auto', padding: '6px 14px', fontSize: '12px', border: 'none',
-//       background: '#f5c518', color: '#3b2a00', fontWeight: '600', borderRadius: '6px',
-//       cursor: 'pointer', fontFamily: 'inherit'
-//     });
-
-//     askRow.append(input, sendBtn);
-//     footer.append(footerTop, askRow);
-//     panel.append(header, content, footer);
-//     document.documentElement.appendChild(panel);
-
-//     // ---- keep the panel fully on screen ----
-
-//     // Nudge the panel so no part of it is off-screen (top, bottom, left or right).
-//     function clampIntoView() {
-//       const r = panel.getBoundingClientRect();
-//       const maxTop = window.innerHeight - r.height - MARGIN;
-//       const maxLeft = window.innerWidth - r.width - MARGIN;
-//       panel.style.top = Math.max(MARGIN, Math.min(r.top, maxTop)) + 'px';
-//       panel.style.left = Math.max(MARGIN, Math.min(r.left, maxLeft)) + 'px';
-//     }
-
-//     // Prefer just below the snipped area; if it won't fit there, try above it;
-//     // then clamp as a last resort.
-//     function placeNearAnchor() {
-//       const h = panel.getBoundingClientRect().height;
-//       const below = anchorRect.bottom + 8;
-//       let top = below;
-//       if (below + h > window.innerHeight - MARGIN) {
-//         const above = anchorRect.top - 8 - h;
-//         if (above >= MARGIN) top = above;
-//       }
-//       panel.style.top = top + 'px';
-//       panel.style.left = anchorRect.left + 'px';
-//       clampIntoView();
-//     }
-
-//     placeNearAnchor();
-
-//     let conversation = []; // full Gemini-format message history for follow-ups
-
-//     function setLoading() {
-//       body.textContent = 'Reading and explaining…';
-//       body.style.color = '#3b2a00';
-//     }
-
-//     function setError(message) {
-//       body.textContent = 'Error: ' + message;
-//       body.style.color = '#c0392b';
-//       placeNearAnchor();
-//     }
-
-//     function setAnswer(text, messages, usageCount, usageLimit) {
-//       body.textContent = text;
-//       body.style.color = '#3b2a00';
-//       conversation = messages || conversation;
-//       footer.style.display = 'block';
-//       if (customModeEnabled) toggleBtn.style.display = 'inline-block';
-//       updateQuota(usageCount, usageLimit);
-//       placeNearAnchor();
-//     }
-
-//     function updateQuota(usageCount, usageLimit) {
-//       if (typeof usageCount !== 'number' || typeof usageLimit !== 'number') return;
-//       quotaLine.textContent = `~${usageCount}/${usageLimit} used today (estimate)`;
-//       quotaLine.style.color = usageCount >= usageLimit * 0.8 ? '#b8860b' : '#7a6520';
-//     }
-
-//     function appendExchange(question, answer) {
-//       const qDiv = document.createElement('div');
-//       qDiv.style.marginTop = '10px';
-//       qDiv.style.fontWeight = '600';
-//       qDiv.style.wordBreak = 'break-word';
-//       qDiv.textContent = 'You: ' + question;
-
-//       const aDiv = document.createElement('div');
-//       aDiv.style.marginTop = '4px';
-//       aDiv.style.whiteSpace = 'pre-wrap';
-//       aDiv.style.wordBreak = 'break-word';
-//       aDiv.textContent = answer;
-
-//       content.append(qDiv, aDiv);
-//       content.scrollTop = content.scrollHeight;
-//       clampIntoView();
-//     }
-
-//     toggleBtn.addEventListener('click', () => {
-//       const open = askRow.style.display === 'none';
-//       askRow.style.display = open ? 'flex' : 'none';
-//       if (open) input.focus();
-//       clampIntoView();
-//     });
-
-//     sendBtn.addEventListener('click', () => sendFollowup());
-//     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendFollowup(); });
-
-//     function sendFollowup() {
-//       const question = input.value.trim();
-//       if (!question) return;
-//       input.value = '';
-//       sendBtn.disabled = true;
-
-//       // Gemini's expected shape: { role, parts: [{ text }] }
-//       const updatedMessages = [...conversation, { role: 'user', parts: [{ text: question }] }];
-//       const thinkingDiv = document.createElement('div');
-//       thinkingDiv.style.marginTop = '10px';
-//       thinkingDiv.style.color = '#7a6520';
-//       thinkingDiv.textContent = 'Thinking…';
-//       content.appendChild(thinkingDiv);
-//       content.scrollTop = content.scrollHeight;
-//       clampIntoView();
-
-//       chrome.runtime.sendMessage({ type: 'ASK_FOLLOWUP', messages: updatedMessages }, (response) => {
-//         sendBtn.disabled = false;
-//         thinkingDiv.remove();
-//         if (chrome.runtime.lastError) {
-//           appendExchange(question, 'Error: ' + chrome.runtime.lastError.message);
-//           return;
-//         }
-//         if (response?.error) {
-//           appendExchange(question, 'Error: ' + response.error);
-//           return;
-//         }
-//         conversation = response.messages;
-//         appendExchange(question, response.text);
-//         updateQuota(response.usageCount, response.usageLimit);
-//       });
-//     }
-//     return { setLoading, setError, setAnswer };
-//   }
-// })();
-
-
 (() => {
   let overlay, box, startX, startY, selecting = false;
   let customModeEnabled = false; // whether the "Ask a question" box is offered at all
@@ -735,7 +385,7 @@
 
     .header {
       display: flex; align-items: center; justify-content: space-between; gap: 6px;
-      padding: 5px 8px 5px 12px; flex: 0 0 auto;
+      padding: 7px 12px 5px 12px; flex: 0 0 auto;
       cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
     }
     .header.dragging { cursor: grabbing; }
@@ -748,7 +398,7 @@
     .tbtn:hover { background: #f3e6a8; }
     .tbtn.on { background: #f5c518; color: #3b2a00; }
 
-    .content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 14px 10px; font-size: 13px; }
+    .content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 14px 10px; margin-right: 6px; font-size: 13px; }
     .answer { overflow-wrap: anywhere; }
     .you { font-weight: 700; margin: 12px 0 4px; padding-top: 8px; border-top: 1px dashed #ecd576; overflow-wrap: anywhere; }
     .thinking { margin-top: 10px; color: #7a6520; }
@@ -790,10 +440,22 @@
     }
     .send:disabled { opacity: 0.6; cursor: default; }
 
-    .grip {
-      position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; cursor: nwse-resize; touch-action: none;
-      background: linear-gradient(135deg, transparent 0 48%, #d4b13a 48% 56%, transparent 56% 68%, #d4b13a 68% 76%, transparent 76% 100%);
+    /* resize handles: 4 edges + 4 corners */
+    .rz { position: absolute; z-index: 5; touch-action: none; }
+    .rz-n  { top: 0;    left: 10px;  right: 10px;  height: 5px; cursor: ns-resize; }
+    .rz-s  { bottom: 0; left: 10px;  right: 22px;  height: 5px; cursor: ns-resize; }
+    .rz-w  { left: 0;   top: 10px;   bottom: 10px; width: 5px;  cursor: ew-resize; }
+    .rz-e  { right: 0;  top: 10px;   bottom: 22px; width: 6px;  cursor: ew-resize; }
+    .rz-n:hover, .rz-s:hover, .rz-w:hover, .rz-e:hover { background: rgba(245,197,24,0.6); }
+    .rz-nw { top: 0;    left: 0;     width: 10px; height: 10px; cursor: nwse-resize; }
+    .rz-ne { top: 0;    right: 0;    width: 10px; height: 10px; cursor: nesw-resize; }
+    .rz-sw { bottom: 0; left: 0;     width: 10px; height: 10px; cursor: nesw-resize; }
+    .rz-nw:hover, .rz-ne:hover, .rz-sw:hover { background: rgba(245,197,24,0.6); }
+    .rz-se {
+      bottom: 0; right: 0; width: 22px; height: 22px; cursor: nwse-resize;
+      background: linear-gradient(135deg, transparent 0 46%, #c9a227 46% 55%, transparent 55% 66%, #c9a227 66% 75%, transparent 75% 100%);
     }
+    .rz-se:hover { background-color: rgba(245,197,24,0.35); }
   `;
 
   function adoptCss(root, css) {
@@ -860,11 +522,14 @@
     askRow.append(input, sendBtn);
     footer.append(footerTop, askRow);
 
-    // ---- resize grip ----
-    const grip = h('div', 'grip');
-    grip.title = 'Drag to resize · double-click to reset';
+    // ---- resize handles: every edge and every corner ----
+    const handles = ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'].map((dir) => {
+      const el = h('div', 'rz rz-' + dir);
+      el.title = 'Drag to resize · double-click to reset';
+      return [dir, el];
+    });
 
-    panel.append(header, content, footer, grip);
+    panel.append(header, content, footer, ...handles.map(([, el]) => el));
     root.appendChild(panel);
     document.documentElement.appendChild(host);
 
@@ -977,38 +642,53 @@
       header.addEventListener('pointercancel', up);
     });
 
-    // ---- resize from the corner ----
-    grip.addEventListener('pointerdown', (e) => {
+    // ---- resize from any edge or corner ----
+    function startResize(e, dir, el) {
       if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
       const r = panel.getBoundingClientRect();
-      const sx = e.clientX, sy = e.clientY, sw = r.width, sh = r.height;
-      try { grip.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      const sx = e.clientX, sy = e.clientY;
+      try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       userSized = true;
+      userPlaced = true;
       panel.style.maxHeight = 'none';
 
       const move = (ev) => {
-        panel.style.width = clamp(sw + ev.clientX - sx, MIN_W, window.innerWidth - r.left - MARGIN) + 'px';
-        panel.style.height = clamp(sh + ev.clientY - sy, MIN_H, window.innerHeight - r.top - MARGIN) + 'px';
+        const dx = ev.clientX - sx;
+        const dy = ev.clientY - sy;
+        let left = r.left, top = r.top, width = r.width, height = r.height;
+        if (dir.includes('e')) width = clamp(r.width + dx, MIN_W, window.innerWidth - r.left);
+        if (dir.includes('s')) height = clamp(r.height + dy, MIN_H, window.innerHeight - r.top);
+        if (dir.includes('w')) { width = clamp(r.width - dx, MIN_W, r.right); left = r.right - width; }
+        if (dir.includes('n')) { height = clamp(r.height - dy, MIN_H, r.bottom); top = r.bottom - height; }
+        panel.style.left = left + 'px';
+        panel.style.top = top + 'px';
+        panel.style.width = width + 'px';
+        panel.style.height = height + 'px';
       };
       const up = () => {
-        grip.removeEventListener('pointermove', move);
-        grip.removeEventListener('pointerup', up);
-        grip.removeEventListener('pointercancel', up);
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
         persist();
       };
-      grip.addEventListener('pointermove', move);
-      grip.addEventListener('pointerup', up);
-      grip.addEventListener('pointercancel', up);
-    });
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    }
 
-    grip.addEventListener('dblclick', () => {
+    function resetSize() {
       applyAutoSize();
       prefs.width = null;
       prefs.height = null;
       savePrefs(prefs);
       clampIntoView();
+    }
+
+    handles.forEach(([dir, el]) => {
+      el.addEventListener('pointerdown', (e) => startResize(e, dir, el));
+      el.addEventListener('dblclick', resetSize);
     });
 
     // ---- header buttons ----
@@ -1051,7 +731,7 @@
       }
       content.style.display = value ? 'none' : '';
       footer.style.display = !value && answered ? 'block' : 'none';
-      grip.style.display = value ? 'none' : '';
+      handles.forEach(([, el]) => { el.style.display = value ? 'none' : ''; });
       btnMin.textContent = value ? '▢' : '—';
       btnMin.title = value ? 'Expand' : 'Minimize (or double-click the title)';
       clampIntoView();
