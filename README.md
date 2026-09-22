@@ -1,11 +1,9 @@
 # Snip & Explain
 
-Snip & Explain is a Chrome extension that helps you understand any selected part of a webpage by turning it into a visual AI prompt. It lets you drag a rectangle around an area, capture that region as an image, and send it to Google Gemini for explanation. The extension then displays a clear, readable answer in a floating panel overlay on the page.
+Snip & Explain is a practical browser extension for turning screenshots into explanations. It combines browser-based screen selection, image capture, Google Gemini AI analysis, and a floating conversation panel to deliver an intuitive visual Q&A experience.
 
-This project is built for people who want to quickly understand screenshots, UI elements, diagrams, code, or text-heavy regions without manually copying content into a separate AI tool.
-
+Its core value is speed and simplicity: select a region, ask the AI to explain it, and continue the conversation in context without leaving the page.
 ---
-
 ## What the project does
 
 The extension works like a lightweight visual assistant for your browser:
@@ -28,109 +26,12 @@ This makes it useful for understanding:
 
 ---
 
-## Main features
-
-### 1. Drag-selection screenshot tool
-
-The extension overlays a selection box on top of the current page. This lets users choose any area visually instead of needing to capture the entire page or manually copy text.
-
-### 2. Google Gemini integration
-
-The extension sends the cropped image to Gemini using the user's own API key. The current model constant is:
-
-```js
-const GEMINI_MODEL = "gemini-3.5-flash-lite";
-```
-
-This allows the extension to explain the image content using a lightweight Gemini model optimized for quick response times.
-
-### 3. Explain captured content in plain language
-
-The prompt sent to Gemini is designed to read text, code, diagrams, charts, and other UI content from the screenshot and turn it into a concise but clear explanation.
-
-The response is shown in the result panel without needing to leave the current page.
-
-### 4. Follow-up conversations
-
-Once an answer is displayed, the user can ask additional questions about the same image. The extension keeps the chat history and sends it back to Gemini, so the model can answer in context.
-
-Examples:
-
-- "Explain this in simpler terms"
-- "What does this error mean?"
-- "Summarize this workflow step by step"
-- "What are the important parts of this chart?"
-
-### 5. Floating result panel with controls
-
-The result panel is built into the web page and includes several controls for a smoother workflow:
-
-- drag to move the panel
-- resize by dragging the corner
-- double-click the resize corner to reset it
-- change text size with A− / A+
-- pin the panel so it stays in place
-- minimize the panel to save space
-- copy the conversation to the clipboard
-- close the panel
-
-The panel also remembers the user’s preferred size, text size, and position between uses.
-
-### 6. Rich response formatting
-
-The extension does not simply dump raw Markdown. It renders formatted responses with:
-
-- headings
-- bold and italic text
-- lists and numbered items
-- tables
-- code blocks
-- block quotes
-- horizontal rules
-- inline math expressions
-
-This makes AI explanations easier to read and scan.
-
-### 7. Local usage tracking estimate
-
-The extension tracks a rough daily count of successful Gemini calls made through the extension. This is shown in the popup and in the result panel.
-
-The usage tracker:
-
-- counts successful requests
-- resets based on Pacific time
-- is shown as a local estimate, not an official Google quota
-- helps users stay aware of free-tier usage
-
-### 8. Settings page for API key management
-
-The project includes a dedicated options page where the user can save their Gemini API key. It also includes instructions for creating one from Google AI Studio.
-
-### 9. BYOK model
-
-The extension follows a BYOK (bring your own key) model:
-
-- the user supplies their own Google AI Studio API key
-- the key is stored locally in Chrome storage
-- no shared backend is needed
-
-This keeps the extension simple and user-controlled.
-
----
 
 ## How the extension is structured
 
 ### Manifest and permissions
 
-The project uses a Manifest V3 Chrome extension setup:
-
-- the extension has a popup UI
-- it injects content scripts into pages
-- it uses a background service worker to handle requests
-- it stores local data in Chrome storage
-- it calls the Google Generative Language API
-
-The manifest also defines the action icon and the options page.
+The project uses a Manifest V3 Chrome extension setup.
 
 ### Files in the project
 
@@ -161,39 +62,6 @@ The manifest also defines the action icon and the options page.
 
 - README.md
   - project overview and usage instructions
-
----
-
-## How it works internally
-
-### 1. User starts a snip
-
-The popup opens and calls script injection on the current page. Once injected, the page gets an overlay that allows the user to drag-select a portion of the screen.
-
-### 2. Screenshot is captured
-
-When the user releases the selection area, the extension calculates the bounding box and captures the visible tab image. It then crops to the exact selected rectangle.
-
-### 3. The crop is sent to Gemini
-
-The selected image is bundled into a Gemini content request with a prompt such as:
-
-> Read whatever text, code, or diagram is in this image and explain it clearly and concisely, as if to someone seeing it for the first time.
-
-### 4. Result is displayed in-page
-
-The response is returned to the content script, which creates or updates the floating panel on the page. It also stores the conversation so follow-up questions can be asked.
-
-### 5. Usage and state are stored locally
-
-The extension saves:
-
-- the Gemini key
-- the custom mode toggle state
-- the panel preferences
-- the daily usage counter
-
-This makes it lightweight and independent of a custom backend.
 
 ---
 
@@ -283,14 +151,7 @@ While the extension is very useful, it does have some practical limits:
 
 ---
 
-## Summary
-
-Snip & Explain is a practical browser extension for turning screenshots into explanations. It combines browser-based screen selection, image capture, Google Gemini AI analysis, and a floating conversation panel to deliver an intuitive visual Q&A experience.
-
-Its core value is speed and simplicity: select a region, ask the AI to explain it, and continue the conversation in context without leaving the page.
-
----
 
 ## License
 
-This repository does not currently appear to include a dedicated license file, so the project should be treated as source code for local or personal use unless the project owner adds a specific license later.
+This repository has no license. But i would really want people to use it and tell me what improvements i can make.Build with problem solving mentality.
