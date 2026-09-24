@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Snip & Explain",
-  "version": "1.1.0",
-  "description": "Drag-select any part of the screen and get it read and explained by Gemini, using your own free API key, with a live daily usage tracker.",
+  "name": "askSnip",
+  "version": "1.1.1",
+  "description": "Drag-select any part of the screen and get it read and queried any question by Gemini, using your own free API key, with a live daily usage tracker(browser count).",
   "permissions": [
     "activeTab",
     "scripting",
     "storage"
   ],
+  
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*"
   ],
@@ -22,6 +23,7 @@
       "128": "icons/icon128.png"
     }
   },
+  
   "options_page": "options.html",
   "icons": {
     "32": "icons/icon32.png",
